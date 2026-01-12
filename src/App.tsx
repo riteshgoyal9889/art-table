@@ -37,23 +37,28 @@ export default function App() {
   const selectedRows = artworks.filter(art => selectedIds.has(art.id));
 
   // Handle selection change from PrimeReact's built-in selection
-  const onSelectionChange = (e: any) => {
-    const currentPageSelection = e.value || [];
-    const currentPageIds = new Set(currentPageSelection.map((item: Artwork) => item.id));
-    const currentPageAllIds = new Set(artworks.map(art => art.id));
+  const onSelectionChange = (e: { value: Artwork[] }) => {
+  const currentPageSelection = e.value;
+  const currentPageIds = new Set<number>(
+    currentPageSelection.map(item => item.id)
+  );
+  const currentPageAllIds = new Set<number>(
+    artworks.map(art => art.id)
+  );
 
-    setSelectedIds(prev => {
-      const copy = new Set(prev);
-      
-      // Remove all current page items first
-      currentPageAllIds.forEach(id => copy.delete(id));
-      
-      // Add back only the selected items from current page
-      currentPageIds.forEach(id => copy.add(id));
-      
-      return copy;
-    });
-  };
+  setSelectedIds(prev => {
+    const copy = new Set(prev);
+
+    // Remove all current page items
+    currentPageAllIds.forEach(id => copy.delete(id));
+
+    // Add selected items from current page
+    currentPageIds.forEach(id => copy.add(id));
+
+    return copy;
+  });
+};
+
 
   // Page change
   const onPage = (e: DataTablePageEvent) => {
@@ -76,8 +81,8 @@ export default function App() {
     setSelectCount(null);
   };
 
-  const first = (page - 1) * ROWS_PER_PAGE;
-  const last = Math.min(first + ROWS_PER_PAGE, totalRecords);
+  //const first = (page - 1) * ROWS_PER_PAGE;
+  //const last = Math.min(first + ROWS_PER_PAGE, totalRecords);
   const selectedCount = selectedIds.size;
 
   
