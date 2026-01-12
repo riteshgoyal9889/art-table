@@ -5,7 +5,6 @@ import { Column } from 'primereact/column';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Button } from 'primereact/button';
 import { InputNumber } from 'primereact/inputnumber';
-import { Checkbox } from 'primereact/checkbox';
 import type { Artwork, ApiResponse } from './types';
 
 const ROWS_PER_PAGE = 12;
@@ -16,9 +15,8 @@ export default function App() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // Persistent selection
+  // Persistent selection - simplified to track only selected items
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [deselectedIds, setDeselectedIds] = useState<Set<number>>(new Set());
 
   const overlayRef = useRef<OverlayPanel>(null);
   const [selectCount, setSelectCount] = useState<number | null>(null);
@@ -36,49 +34,31 @@ export default function App() {
   }, [page]);
 
   // Selected rows for current page
-  const selectedRows = artworks.filter(
-    art => selectedIds.has(art.id) && !deselectedIds.has(art.id)
-  );
+  const selectedRows = artworks.filter(art => selectedIds.has(art.id));
 
-  // Row select
-  const onRowSelect = (e: any) => {
-    const id = e.data.id;
-    setSelectedIds(prev => new Set(prev).add(id));
-    setDeselectedIds(prev => {
+  // Handle selection change from PrimeReact's built-in selection
+  const onSelectionChange = (e: any) => {
+    const currentPageSelection = e.value || [];
+    const currentPageIds = new Set(currentPageSelection.map((item: Artwork) => item.id));
+    const currentPageAllIds = new Set(artworks.map(art => art.id));
+
+    setSelectedIds(prev => {
       const copy = new Set(prev);
-      copy.delete(id);
+      
+      // Remove all current page items first
+      currentPageAllIds.forEach(id => copy.delete(id));
+      
+      // Add back only the selected items from current page
+      currentPageIds.forEach(id => copy.add(id));
+      
       return copy;
     });
-  };
-
-  // Row unselect
-  const onRowUnselect = (e: any) => {
-    setDeselectedIds(prev => new Set(prev).add(e.data.id));
   };
 
   // Page change
   const onPage = (e: DataTablePageEvent) => {
     setPage(e.page! + 1);
   };
-
-  // Select all / deselect all (CURRENT PAGE ONLY)
-  const toggleSelectAllCurrentPage = (checked: boolean) => {
-    setSelectedIds(prev => {
-      const copy = new Set(prev);
-      artworks.forEach(a => checked ? copy.add(a.id) : copy.delete(a.id));
-      return copy;
-    });
-
-    setDeselectedIds(prev => {
-      const copy = new Set(prev);
-      artworks.forEach(a => checked ? copy.delete(a.id) : copy.add(a.id));
-      return copy;
-    });
-  };
-
-  const isAllCurrentPageSelected =
-    artworks.length > 0 &&
-    artworks.every(a => selectedIds.has(a.id) && !deselectedIds.has(a.id));
 
   // Custom select (CURRENT PAGE ONLY)
   const handleCustomSelect = () => {
@@ -92,19 +72,13 @@ export default function App() {
       return copy;
     });
 
-    setDeselectedIds(prev => {
-      const copy = new Set(prev);
-      rowsToSelect.forEach(r => copy.delete(r.id));
-      return copy;
-    });
-
     overlayRef.current?.hide();
     setSelectCount(null);
   };
 
   const first = (page - 1) * ROWS_PER_PAGE;
   const last = Math.min(first + ROWS_PER_PAGE, totalRecords);
-  const selectedCount = Math.max(0,selectedIds.size - deselectedIds.size);
+  const selectedCount = selectedIds.size;
 
   
   return (
@@ -146,25 +120,15 @@ export default function App() {
         first={(page - 1) * ROWS_PER_PAGE}
         onPage={onPage}
         selection={selectedRows}
-        onRowSelect={onRowSelect}
-        onRowUnselect={onRowUnselect}
-        
+        onSelectionChange={onSelectionChange}
+        selectionMode="multiple"
         dataKey="id"
 
         paginatorTemplate="CurrentPageReport PrevPageLink PageLinks NextPageLink"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
       >
 
-        <Column
-          header={
-            <Checkbox
-              checked={isAllCurrentPageSelected}
-              onChange={(e) => toggleSelectAllCurrentPage(e.checked!)}
-            />
-          }
-          selectionMode="checkbox"
-          headerStyle={{ width: '3rem' }}
-        />
+        <Column selectionMode="multiple" headerStyle={{ width: '3rem' }}></Column>
         <Column field="title" header="Title" />
         <Column field="place_of_origin" header="Origin" />
         <Column field="artist_display" header="Artist" />
